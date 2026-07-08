@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.git
+**/agenttest.db
+**/data
+frontend/.eslintrc.cjs
+*.log

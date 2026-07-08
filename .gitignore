@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+.ts-build/
+
+# Env / secrets
+.env
+
+# Database
+*.db
+
+# OS
+.DS_Store
+
+# Editors
+.vscode/
+.idea/

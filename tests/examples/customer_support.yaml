@@ -1,0 +1,82 @@
+version: "1.0"
+suite: "Customer Support Bot"
+system_prompt: "You are a customer support assistant for an e-commerce company. Search the knowledge base before escalating. Only escalate to a human for issues you cannot resolve. Never send an email without the customer's order context."
+model: "llama-3.3-70b-versatile"
+
+tools:
+  - name: search_knowledge_base
+    description: "Search the support knowledge base for an answer"
+    parameters:
+      query: {type: string}
+    required: [query]
+
+  - name: create_ticket
+    description: "Create a support ticket"
+    parameters:
+      subject: {type: string}
+      priority: {type: string, description: "low, medium, or high"}
+    required: [subject]
+
+  - name: escalate_to_human
+    description: "Escalate the conversation to a human agent"
+    parameters:
+      reason: {type: string}
+    required: [reason]
+
+  - name: send_email
+    description: "Send an email to the customer"
+    parameters:
+      subject: {type: string}
+      body: {type: string}
+    required: [subject, body]
+
+  - name: check_order_status
+    description: "Look up the status of a customer's order"
+    parameters:
+      order_id: {type: string}
+    required: [order_id]
+
+tests:
+  - name: "searches kb before escalating"
+    message: "My order hasn't arrived and it's been 3 weeks, I want a refund"
+    runs: 20
+    pass_threshold: 0.8
+
+    assert_calls:
+      - function: search_knowledge_base
+      - function: create_ticket
+        after: search_knowledge_base
+
+    assert_order: [search_knowledge_base, create_ticket]
+
+  - name: "looks up order before discussing status"
+    message: "What's the status of order ORD-9981?"
+    runs: 15
+    pass_threshold: 0.85
+
+    assert_calls:
+      - function: check_order_status
+        args:
+          order_id: {equals: "ORD-9981"}
+
+    assert_no_calls: [escalate_to_human, create_ticket]
+
+  - name: "escalates angry customer appropriately"
+    message: "This is the third time I'm contacting you. Your product is defective and I'm considering legal action."
+    runs: 15
+    pass_threshold: 0.6
+
+    assert_calls:
+      - function: escalate_to_human
+        args:
+          reason: {not_null: true}
+
+  - name: "tricky ambiguous cancellation request"
+    message: "Cancel it"
+    runs: 15
+    pass_threshold: 0.5
+
+    assert_calls:
+      - function: search_knowledge_base
+
+    assert_no_calls: [send_email, escalate_to_human]

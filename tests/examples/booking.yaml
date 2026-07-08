@@ -1,0 +1,92 @@
+version: "1.0"
+suite: "Flight Booking Agent"
+system_prompt: "You are a travel booking assistant. Use tools to help users search for and book flights. Always search before booking, and never send a confirmation yourself — that is handled by a separate system."
+model: "llama-3.3-70b-versatile"
+
+tools:
+  - name: search_flights
+    description: "Search available flights"
+    parameters:
+      destination: {type: string, description: "City name"}
+      date: {type: string, description: "YYYY-MM-DD format"}
+      sort_by: {type: string, description: "price or duration"}
+    required: [destination, date]
+
+  - name: book_flight
+    description: "Book a specific flight"
+    parameters:
+      flight_id: {type: string}
+      passenger_name: {type: string}
+    required: [flight_id]
+
+  - name: cancel_booking
+    description: "Cancel an existing booking"
+    parameters:
+      booking_id: {type: string}
+    required: [booking_id]
+
+  - name: check_status
+    description: "Check the status of a booking"
+    parameters:
+      booking_id: {type: string}
+    required: [booking_id]
+
+  - name: send_confirmation
+    description: "Send a booking confirmation email (system-only, never call directly)"
+    parameters:
+      booking_id: {type: string}
+      email: {type: string}
+    required: [booking_id]
+
+tests:
+  - name: "search before booking"
+    message: "Book me the cheapest flight to Paris on July 15"
+    runs: 20
+    pass_threshold: 0.85
+
+    assert_calls:
+      - function: search_flights
+        args:
+          destination: {equals: "Paris"}
+          sort_by: {equals: "price"}
+      - function: book_flight
+        after: search_flights
+        args:
+          flight_id: {type: string, not_null: true}
+
+    assert_no_calls: [send_confirmation]
+    assert_order: [search_flights, book_flight]
+
+  - name: "handles vague date"
+    message: "Book me a flight to Tokyo sometime next month"
+    runs: 15
+    pass_threshold: 0.7
+
+    assert_calls:
+      - function: search_flights
+        args:
+          destination: {equals: "Tokyo"}
+          date: {type: string, not_null: true}
+
+  - name: "checks status without booking"
+    message: "What's the status of booking BK12345?"
+    runs: 15
+    pass_threshold: 0.85
+
+    assert_calls:
+      - function: check_status
+        args:
+          booking_id: {equals: "BK12345"}
+
+    assert_no_calls: [search_flights, book_flight, cancel_booking]
+
+  - name: "multi-turn booking and cancel"
+    conversation:
+      - role: user
+        message: "Book me a flight to Tokyo on August 3rd"
+        assert_calls: [search_flights, book_flight]
+      - role: user
+        message: "Actually cancel that booking"
+        assert_calls: [cancel_booking]
+    runs: 10
+    pass_threshold: 0.75

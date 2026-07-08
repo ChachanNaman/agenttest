@@ -1,0 +1,91 @@
+version: "1.0"
+suite: "Code Assistant Agent"
+system_prompt: "You are a coding assistant with access to a repository. Always read a file before writing to it. Always run tests after making a code change. Never open a PR without passing tests."
+model: "llama-3.3-70b-versatile"
+
+tools:
+  - name: read_file
+    description: "Read the contents of a file in the repo"
+    parameters:
+      path: {type: string, description: "File path relative to repo root"}
+    required: [path]
+
+  - name: write_file
+    description: "Write content to a file in the repo"
+    parameters:
+      path: {type: string}
+      content: {type: string}
+    required: [path, content]
+
+  - name: run_tests
+    description: "Run the project's test suite"
+    parameters:
+      pattern: {type: string, description: "Optional test file pattern"}
+    required: []
+
+  - name: search_codebase
+    description: "Search the codebase for a symbol or string"
+    parameters:
+      query: {type: string}
+    required: [query]
+
+  - name: create_pr
+    description: "Open a pull request with the current changes"
+    parameters:
+      title: {type: string}
+      description: {type: string}
+    required: [title]
+
+tests:
+  - name: "reads before writing"
+    message: "Fix the off-by-one error in utils/pagination.py"
+    runs: 20
+    pass_threshold: 0.85
+
+    assert_calls:
+      - function: read_file
+        args:
+          path: {contains: "pagination"}
+      - function: write_file
+        after: read_file
+        args:
+          path: {contains: "pagination"}
+
+    assert_order: [read_file, write_file]
+
+  - name: "runs tests after changes"
+    message: "Add input validation to the signup form handler"
+    runs: 15
+    pass_threshold: 0.75
+
+    assert_calls:
+      - function: write_file
+      - function: run_tests
+        after: write_file
+
+    assert_order: [write_file, run_tests]
+
+  - name: "searches before blind edits"
+    message: "Where is the rate limiter configured, and can you double the limit?"
+    runs: 15
+    pass_threshold: 0.7
+
+    assert_calls:
+      - function: search_codebase
+        args:
+          query: {contains: "rate"}
+
+    assert_order: [search_codebase, write_file]
+
+  - name: "never opens PR without tests"
+    message: "Refactor the database connection pooling logic and open a PR"
+    runs: 15
+    pass_threshold: 0.65
+
+    assert_calls:
+      - function: run_tests
+        after: write_file
+      - function: create_pr
+        after: run_tests
+
+    assert_order: [write_file, run_tests, create_pr]

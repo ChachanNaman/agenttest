@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  agenttest:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data          # persist SQLite db
+      - ./tests:/app/tests        # mount test files
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_PATH=/app/data/agenttest.db
