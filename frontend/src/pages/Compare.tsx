@@ -11,7 +11,7 @@ interface VariantForm {
 
 const EMPTY_BASELINE: VariantForm = { label: "baseline", systemPrompt: "", model: "" };
 const EMPTY_CANDIDATE: VariantForm = { label: "candidate", systemPrompt: "", model: "" };
-
+//
 function VariantPanel({
   title,
   value,
