@@ -8,7 +8,7 @@ interface VariantForm {
   systemPrompt: string;
   model: string;
 }
-
+//
 const EMPTY_BASELINE: VariantForm = { label: "baseline", systemPrompt: "", model: "" };
 const EMPTY_CANDIDATE: VariantForm = { label: "candidate", systemPrompt: "", model: "" };
 //
